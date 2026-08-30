@@ -18,7 +18,7 @@
 | [数据库](./database.md) | 命名、主键、迁移、索引 |
 | [日志](./logging.md) | 级别、请求 ID、敏感信息 |
 | [安全](./security.md) | 密钥、鉴权、密码、CORS |
-| [Git 与协作](./git.md) | 提交信息、分支、禁止提交项 |
+| [Git 与协作](./git.md) | git-flow、feature 任务分支、提交信息 |
 | [测试](./testing.md) | pytest、夹具、覆盖范围 |
 
 ## 工具如何卡住规范

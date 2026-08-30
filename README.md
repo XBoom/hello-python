@@ -4,6 +4,12 @@
 
 编码、API、数据库、日志等约定见 [docs/](./docs/README.md)，开发前先读索引。
 
+日常开发采用 [git-flow](./docs/git.md)：长期分支为 `main`（生产）与 `develop`（集成）。**每个任务从 `develop` 新开 `feature/<任务名>`**，合入 `develop`，不要直接在 `main` / `develop` 上提交。
+
+```bash
+make feature n=<任务短名>
+```
+
 ## 能力
 
 - FastAPI 应用工厂 + 生命周期管理
@@ -94,6 +100,8 @@ make format         # ruff 格式化
 make migrate        # alembic upgrade head
 make migrate-new m="add xxx table"
 make docker-up      # PostgreSQL + API
+make feature n=xxx  # 从 develop 新开 feature/xxx
+make hotfix n=xxx   # 从 main 新开 hotfix/xxx
 ```
 
 生成新迁移前确保模型已改好，再执行 `make migrate-new m="说明"`。
