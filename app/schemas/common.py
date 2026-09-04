@@ -1,17 +1,38 @@
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.core.constants import ErrorCode
 
 
 class Response[T](BaseModel):
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "code": 0,
+                "message": "success",
+                "data": {"id": "5f3d2c8e-1a4b-4d6f-9c2a-1b6e7f8a9b0c"},
+            }
+        }
+    )
+
     code: int = ErrorCode.SUCCESS
     message: str = "success"
     data: T | None = None
 
 
 class PageResult[T](BaseModel):
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "items": [],
+                "total": 0,
+                "page": 1,
+                "page_size": 20,
+            }
+        }
+    )
+
     items: list[T]
     total: int
     page: int

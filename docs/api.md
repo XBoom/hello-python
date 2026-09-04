@@ -104,3 +104,58 @@ HTTP 状态码表示类别；`code` 表示业务细分。格式：`{HTTP状态}{
 - 每个路由设 `tags`，与资源名一致（`auth`、`users`、`health`）。
 - 入参用 Pydantic schema，字段加 `Field(min_length=...)` 等约束，让文档和校验一致。
 - 生产关闭 `/docs`，见 [项目规范](./project.md)。
+
+## OpenAPI 元数据
+
+`create_app()` 在 `app/main.py` 集中配置以下 OpenAPI 元数据，便于 `/docs` 与客户端代码生成。
+
+| 字段 | 值 | 说明 |
+|------|-----|------|
+| `title` | `"{APP_NAME} - {ENVIRONMENT}"` | 例：`Hello Python API - development` |
+| `version` | `settings.APP_VERSION` | 默认 `0.1.0` |
+| `description` | `"FastAPI 后端服务"` | 简短中文描述 |
+| `contact` | `{"name": "Backend Team"}` | 维护团队 |
+| `license_info` | `{"name": "MIT"}` | 许可证（假设 MIT） |
+| `docs_url` | `/docs` (DEBUG 时) / `None` | 生产环境关闭 |
+| `openapi_url` | `/openapi.json` (DEBUG 时) / `None` | 生产环境关闭 |
+
+### 标签分组（openapi_tags）
+
+```python
+OPENAPI_TAGS = [
+    {"name": "auth",  "description": "登录/注册/刷新令牌"},
+    {"name": "users", "description": "用户管理"},
+    {"name": "health", "description": "健康/就绪检查"},
+]
+```
+
+新增路由时：在 `@router.get(...)` 等装饰器上加 `tags=["auth"]`，并在 `OPENAPI_TAGS` 里补一条描述。
+
+### 鉴权安全定义（BearerAuth）
+
+通过 `app.openapi()` 自定义钩子注入 JWT Bearer 安全方案到 `components.securitySchemes`：
+
+```json
+{
+  "BearerAuth": {
+    "type": "http",
+    "scheme": "bearer",
+    "bearerFormat": "JWT"
+  }
+}
+```
+
+调用方式：`Authorization: Bearer <access_token>`。需要登录的接口在路由上加 `Depends(get_current_user)`，FastAPI 会自动按依赖把该接口标为受保护。
+
+### Schema 示例（example）
+
+所有出入参 Pydantic schema 通过 `model_config = ConfigDict(json_schema_extra={"example": {...}})` 提供示例。Swagger UI 会把 `example` 渲染为「Try it out」预填值，便于联调。
+
+已加示例的 schema：
+
+- `Response[T]`：成功响应信封
+- `PageResult[T]`：分页响应
+- `UserCreate` / `UserLogin` / `UserRead`
+- `TokenPair`
+
+新增 schema 时：在类体内补 `model_config = ConfigDict(json_schema_extra={...})`，`example` 字段值要能通过自身校验（UUID 格式、ISO 8601 时间等）。

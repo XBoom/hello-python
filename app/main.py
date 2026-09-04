@@ -1,10 +1,12 @@
 import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from typing import Any
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.openapi.utils import get_openapi
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
@@ -18,6 +20,39 @@ from app.db.session import engine
 
 logger = logging.getLogger(__name__)
 
+OPENAPI_TAGS: list[dict[str, str]] = [
+    {"name": "auth", "description": "登录/注册/刷新令牌"},
+    {"name": "users", "description": "用户管理"},
+    {"name": "health", "description": "健康/就绪检查"},
+]
+
+
+def custom_openapi() -> dict[str, Any]:
+    """自定义 OpenAPI schema：注入 BearerAuth 安全定义。
+
+    返回值会被 FastAPI 缓存（绑定到 app.openapi_schema），避免每次请求都重建。
+    """
+    if app.openapi_schema:
+        return app.openapi_schema
+    schema = get_openapi(
+        title=app.title,
+        version=app.version,
+        description=app.description,
+        contact=app.contact,
+        license_info=app.license_info,
+        tags=app.openapi_tags,
+        routes=app.routes,
+    )
+    schema.setdefault("components", {}).setdefault("securitySchemes", {})[
+        "BearerAuth"
+    ] = {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+    }
+    app.openapi_schema = schema
+    return schema
+
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
@@ -28,14 +63,20 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
 
 def create_app() -> FastAPI:
     app = FastAPI(
-        title=settings.APP_NAME,
+        title=f"{settings.APP_NAME} - {settings.ENVIRONMENT}",
         version=settings.APP_VERSION,
+        description="FastAPI 后端服务",
         debug=settings.DEBUG,
         lifespan=lifespan,
+        contact={"name": "Backend Team"},
+        license_info={"name": "MIT"},
+        openapi_tags=OPENAPI_TAGS,
         docs_url="/docs" if settings.DEBUG else None,
         redoc_url="/redoc" if settings.DEBUG else None,
         openapi_url="/openapi.json" if settings.DEBUG else None,
     )
+
+    app.openapi = custom_openapi  # type: ignore[method-assign]
 
     app.add_middleware(RequestContextMiddleware)
     app.add_middleware(
