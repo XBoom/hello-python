@@ -25,6 +25,10 @@ class Settings(BaseSettings):
 
     DATABASE_URL: str = "sqlite+aiosqlite:///./app.db"
 
+    # Redis 缓存（可选）。REDIS_URL 未配置时缓存层自动 fallback 到内存实现。
+    REDIS_URL: str | None = None
+    REDIS_KEY_PREFIX: str = "hello-python"
+
     CORS_ORIGINS: list[str] = Field(
         default_factory=lambda: ["http://localhost:3000", "http://localhost:5173"]
     )

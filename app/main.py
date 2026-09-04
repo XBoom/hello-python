@@ -11,6 +11,7 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api.v1.router import api_router
+from app.core.cache import get_cache
 from app.core.config import settings
 from app.core.constants import ErrorCode
 from app.core.exceptions import AppError
@@ -57,7 +58,15 @@ def custom_openapi() -> dict[str, Any]:
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     setup_logging()
+    # 启动期探测 Redis 连通性(若配置)。失败仅 WARN,不阻断启动。
+    cache = get_cache()
+    if settings.REDIS_URL:
+        if await cache.ping():
+            logger.info("Redis 缓存连通性 OK url=%s", settings.REDIS_URL)
+        else:
+            logger.warning("Redis 缓存连通性失败 url=%s,降级为缓存层自处理", settings.REDIS_URL)
     yield
+    await cache.close()
     await engine.dispose()
 
 

@@ -159,3 +159,44 @@ OPENAPI_TAGS = [
 - `TokenPair`
 
 新增 schema 时：在类体内补 `model_config = ConfigDict(json_schema_extra={...})`，`example` 字段值要能通过自身校验（UUID 格式、ISO 8601 时间等）。
+
+## Redis 缓存（可选，默认 in-memory fallback）
+
+应用内置轻量缓存抽象 `app.core.cache.Cache`，提供 `get / set / delete / expire / ping / close` 最小接口。**不强制依赖 Redis**：
+
+| `REDIS_URL` 配置 | 缓存实现 | 备注 |
+|------------------|---------|------|
+| 未设置 / `null` | `InMemoryCache`（进程内 dict + TTL） | 重启即失效，启动日志会打 `WARN` |
+| `redis://host:port/db` | `RedisCache`（redis-py 原生 async） | 自动加 `REDIS_KEY_PREFIX:` 命名空间 |
+
+### 配置项
+
+`.env` / 部署环境变量：
+
+```bash
+# 留空 = 走内存 fallback
+REDIS_URL=redis://localhost:6379/0
+REDIS_KEY_PREFIX=hello-python
+```
+
+`docker-compose.yml` 已内置 `redis:7-alpine` 服务（端口 `6379`、卷 `redis_data`、`redis-cli ping` healthcheck）。`api` 服务通过 `REDIS_URL=redis://redis:6379/0` 自动连上；其他部署把 `REDIS_URL` 指向托管 Redis 即可。
+
+### 启用方式
+
+1. 装依赖：`uv pip install "redis[hiredis]>=5.0.0"`（已加入 `pyproject.toml`）。
+2. 配置 `REDIS_URL`：本地开发可用 `docker compose up -d redis`，生产指向托管 Redis。
+3. 启动期会自动 `PING` 一次，失败仅 `WARN` 不阻断。
+4. 代码侧：`from app.core.cache import get_cache; cache = get_cache()` 拿到当前实例。
+
+### 演示接口
+
+`GET /api/v1/cache-demo/ping` 仅在 `DEBUG=true` 时挂载：
+
+- 首次调用 `source=miss`，写入 60s TTL 缓存；
+- 再次调用 `source=hit`，从缓存返回。
+
+生产环境 `DEBUG=false` 时该路由不会出现在 `/openapi.json` 里。
+
+### 测试
+
+`tests/test_cache.py` 用 `fakeredis.aioredis` 替代真实 Redis，无需起本地服务即可跑完整用例集。开发同学可以放心跑 `pytest -v`，CI 不依赖 Redis 实例。
