@@ -2,7 +2,7 @@
 
 分层清晰、可直接二次开发的异步 FastAPI 脚手架。本地默认 SQLite，生产使用 PostgreSQL。
 
-编码、API、数据库、日志等约定见 [docs/](./docs/README.md)，开发前先读索引。
+编码、API、数据库、日志等约定见 [docs/](./docs/README.md)。技术原理与最佳实践见 [learn/](./learn/README.md)（按章节学本仓库用到的栈）。
 
 日常开发采用 [git-flow](./docs/git.md)：长期分支为 `main`（生产）与 `develop`（集成）。**每个任务从 `develop` 新开 `feature/<任务名>`**，合入 `develop`，不要直接在 `main` / `develop` 上提交。
 
